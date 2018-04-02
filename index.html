@@ -5,7 +5,7 @@ body {
     margin: 0;
 }
 .area {
-    fill: steelblue;
+    transition: fill linear 0.5s;
 }
 
 </style>
@@ -13,9 +13,12 @@ body {
 <script src="d3.v4.min.js"></script>
 <script>
 
-var n = 90,
+const n = 40,
     random = d3.randomNormal(0.5, 0.1),
-    data = d3.range(n).map(random);
+    data = d3.range(n).map(random),
+    HUE_CHANGE_RATE = 5;
+
+let hue = 0;
 
 var svg = d3.select('svg'),
     margin = {top: 0, right: 0, bottom: 0, left: 0},
@@ -54,6 +57,7 @@ g.append('g')
     .append('path')
     .datum(data)
     .attr('class', 'area')
+    .attr('fill', `hsl(${hue += HUE_CHANGE_RATE}, 50%, 60%`)
     .transition()
     .duration(500)
     .ease(d3.easeLinear)
@@ -66,7 +70,8 @@ function tick() {
     // Redraw the area.
     d3.select(this)
         .attr('d', area)
-        .attr('transform', null);
+        .attr('transform', null)
+        .attr('fill', `hsl(${hue += 10}, 50%, 60%`);
 
     // Slide it to the left.
     d3.active(this)
