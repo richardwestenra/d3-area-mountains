@@ -16,20 +16,6 @@
 <script src="d3.v4.min.js"></script>
 
 <script>
-    // const constrainNumber = n =>
-    //     Math.max(Math.min(n, max), min);
-
-
-    // const randomDatum = (max, min) =>
-    //     ((Math.random() - 0.5) * (max - min)) + min;
-
-
-    // const randomNextDatum = (previous) => previous + randomDatum(
-    //     constrainNumber(walk),
-    //     constrainNumber(-walk)
-    // );
-
-
     const randomNextDatum = (previous) => {
         let randomWalk  = (Math.random() - 0.5) * walk * 2;
         if (previous + randomWalk > max || previous + randomWalk < min) {
