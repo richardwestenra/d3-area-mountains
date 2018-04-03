@@ -16,68 +16,142 @@
 <script src="d3.v4.min.js"></script>
 
 <script>
-    function onResizeCanvas() {
-        width = window.innerWidth;
-        height = window.innerHeight;
-        canvas.width = width;
-        canvas.height = height;
+    // const constrainNumber = n =>
+    //     Math.max(Math.min(n, max), min);
+
+
+    // const randomDatum = (max, min) =>
+    //     ((Math.random() - 0.5) * (max - min)) + min;
+
+
+    // const randomNextDatum = (previous) => previous + randomDatum(
+    //     constrainNumber(walk),
+    //     constrainNumber(-walk)
+    // );
+
+
+    const randomNextDatum = (previous) => {
+        let randomWalk  = (Math.random() - 0.5) * walk * 2;
+        if (previous + randomWalk > max || previous + randomWalk < min) {
+            randomWalk = -randomWalk;
+        }
+        return previous + randomWalk;
     }
 
-    function drawArea() {
+
+    const last = (data) => data[data.length - 1];
+
+
+    const populateData = () => {
+        data.push(randomNextDatum(last(data)));
+        if (data.length < dataCount) {
+            populateData();
+        }
+    };
+
+
+    const drawArea = () => {
         context.beginPath();
         area(data);
         context.fillStyle = `hsl(${hue += HUE_CHANGE_RATE}, 50%, 60%`;
         context.fill();
-    }
+    };
+    
+    let start = null;
+    let previous = null;
+    const frequency = 1000;
+    let timeSinceLastNewDatum = 0;
+    
+    const tick = (timestamp) => {
+        if (!start) {
+            start = timestamp;
+        }
+        const progress = timestamp - start;
+        const delta = progress - previous;
+        previous = progress;
 
-    function tick() {
+        timeSinceLastNewDatum += delta;
+        const travel = timeSinceLastNewDatum * 0.001 * tickDistance;
+        if (timeSinceLastNewDatum > frequency) {
+            timeSinceLastNewDatum -= frequency;
+
+            // Push a new data point onto the back.
+            data.push(randomNextDatum(last(data)));
+
+            // Pop the old data point off the front.
+            data.shift();
+
+            x.range([0, width + tickDistance]);
+        } else {
+            x.range([0 - travel, width + tickDistance - travel]);
+        }
+        
         // Clear the canvas
         context.clearRect(0, 0, width, height);
-
-        // Push a new data point onto the back.
-        data.push(random());
-
+        
         // Redraw the area.
         drawArea();
 
-        // Pop the old data point off the front.
-        data.shift();
-
+        context.font = '20px Arial';
+        context.fillStyle = 'black';
+        context.fillText(`last data point: ${last(data).toFixed(3)}`, 50, 50);
+        context.fillText(`progress: ${progress}`, 50, 100);
+        context.fillText(`frame delta: ${delta}`, 50, 150);
+        
         requestAnimationFrame(tick);
-    }
+    };
 
-    const n = 400,
-        random = d3.randomNormal(0.5, 0.1),
-        data = d3.range(n).map(random),
+
+    const max = 1,
+        min = 0,
+        walk = 0.02,
         HUE_CHANGE_RATE = 1;
 
     let hue = 0,
-        width,
-        height;
-
-    const canvas = document.createElement('canvas'),
-        context = canvas.getContext('2d');
-
-    onResizeCanvas();
-
-    window.addEventListener('resize', onResizeCanvas);
-
-    var x = d3.scaleLinear()
-        .domain([0, n - 1])
-        .range([0, width]);
-
-    var y = d3.scaleLinear()
+        data = [0.5],
+        width = window.innerWidth,
+        height = window.innerHeight,
+        dataCount = Math.floor(width / 10);
+    
+    let tickDistance = width / dataCount;
+    
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    const x = d3.scaleLinear()
+        .domain([0, dataCount - 1])
+        .range([0, width + tickDistance]);
+    
+    const y = d3.scaleLinear()
         .domain([0, 1])
         .range([height, 0]);
-
-    var area = d3.area()
+    
+    const area = d3.area()
         .x(function(d, i) { return x(i); })
         .y0(y(0))
         .y1(function(d, i) { return y(d); })
         .context(context);
 
+    populateData();
+    
+    window.addEventListener('resize', () => {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        dataCount = Math.floor(width / 10);
+        // tickDistance = width / dataCount;
+        canvas.width = width;
+        canvas.height = height;
+        x.range([0, width]);
+        y.range([height, 0]);
+        data = [last(data)];
+        populateData();
+    });
+    
     document.body.appendChild(canvas);
-
+    
     requestAnimationFrame(tick);
 </script>
 </body>
