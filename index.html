@@ -85,15 +85,16 @@
 
     const max = 1,
         min = 0,
-        walk = 0.02,
-        HUE_CHANGE_RATE = 1,
-        frequency = 1000;
+        walk = 0.03,
+        HUE_CHANGE_RATE = 0.3,
+        frequency = 1000,
+        tickFrequency = 0.1;
 
     let hue = 0,
         data = [0.5],
         width = window.innerWidth,
         height = window.innerHeight,
-        dataCount = Math.floor(width / 10),
+        dataCount = Math.floor(width * tickFrequency),
         tickDistance = width / dataCount,
         start = null,
         previous = null,
@@ -124,7 +125,7 @@
     window.addEventListener('resize', () => {
         width = window.innerWidth;
         height = window.innerHeight;
-        dataCount = Math.floor(width / 10);
+        dataCount = Math.floor(width * tickFrequency);
         tickDistance = width / dataCount;
         canvas.width = width;
         canvas.height = height;
