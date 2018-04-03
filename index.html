@@ -57,11 +57,6 @@
         context.fill();
     };
     
-    let start = null;
-    let previous = null;
-    const frequency = 1000;
-    let timeSinceLastNewDatum = 0;
-    
     const tick = (timestamp) => {
         if (!start) {
             start = timestamp;
@@ -105,15 +100,18 @@
     const max = 1,
         min = 0,
         walk = 0.02,
-        HUE_CHANGE_RATE = 1;
+        HUE_CHANGE_RATE = 1,
+        frequency = 1000;
 
     let hue = 0,
         data = [0.5],
         width = window.innerWidth,
         height = window.innerHeight,
-        dataCount = Math.floor(width / 10);
-    
-    let tickDistance = width / dataCount;
+        dataCount = Math.floor(width / 10),
+        tickDistance = width / dataCount,
+        start = null,
+        previous = null,
+        timeSinceLastNewDatum = 0;
     
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
