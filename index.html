@@ -141,10 +141,11 @@
         width = window.innerWidth;
         height = window.innerHeight;
         dataCount = Math.floor(width / 10);
-        // tickDistance = width / dataCount;
+        tickDistance = width / dataCount;
         canvas.width = width;
         canvas.height = height;
-        x.range([0, width]);
+        x.domain([0, dataCount - 1])
+            .range([0, width]);
         y.range([height, 0]);
         data = [last(data)];
         populateData();
