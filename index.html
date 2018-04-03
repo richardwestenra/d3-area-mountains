@@ -1,86 +1,84 @@
 <!DOCTYPE html>
+<html>
 <meta charset="utf-8">
+<head>
+</head>
+<body>
 <style>
-body {
-    margin: 0;
-}
-.area {
-    transition: fill linear 0.5s;
-}
-
+    body {
+        margin: 0;
+    }
+    .area {
+        transition: fill linear 0.5s;
+    }
 </style>
-<svg width="960" height="500"></svg>
+
 <script src="d3.v4.min.js"></script>
+
 <script>
+    function onResizeCanvas() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+    }
 
-const n = 40,
-    random = d3.randomNormal(0.5, 0.1),
-    data = d3.range(n).map(random),
-    HUE_CHANGE_RATE = 5;
+    function drawArea() {
+        context.beginPath();
+        area(data);
+        context.fillStyle = `hsl(${hue += HUE_CHANGE_RATE}, 50%, 60%`;
+        context.fill();
+    }
 
-let hue = 0;
+    function tick() {
+        // Clear the canvas
+        context.clearRect(0, 0, width, height);
 
-var svg = d3.select('svg'),
-    margin = {top: 0, right: 0, bottom: 0, left: 0},
-    width = window.innerWidth,
-    height = window.innerHeight,
-    inner = {
-        width: width - margin.left - margin.right,
-        height: height - margin.top - margin.bottom,
-    };
+        // Push a new data point onto the back.
+        data.push(random());
 
-svg.attr('width', width).attr('height', height);
+        // Redraw the area.
+        drawArea();
 
-var g = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`);
+        // Pop the old data point off the front.
+        data.shift();
 
-var x = d3.scaleLinear()
-    .domain([0, n - 1])
-    .range([0, inner.width]);
+        requestAnimationFrame(tick);
+    }
 
-var y = d3.scaleLinear()
-    .domain([0, 1])
-    .range([inner.height, 0]);
+    const n = 400,
+        random = d3.randomNormal(0.5, 0.1),
+        data = d3.range(n).map(random),
+        HUE_CHANGE_RATE = 1;
 
-var area = d3.area()
-    .x(function(d, i) { return x(i); })
-    .y0(y(-1))
-    .y1(function(d, i) { return y(d); });
+    let hue = 0,
+        width,
+        height;
 
-g.append('defs').append('clipPath')
-    .attr('id', 'clip')
-    .append('rect')
-    .attr('width', inner.width)
-    .attr('height', inner.height);
+    const canvas = document.createElement('canvas'),
+        context = canvas.getContext('2d');
 
-g.append('g')
-    .attr('clip-path', 'url(#clip)')
-    .append('path')
-    .datum(data)
-    .attr('class', 'area')
-    .attr('fill', `hsl(${hue += HUE_CHANGE_RATE}, 50%, 60%`)
-    .transition()
-    .duration(500)
-    .ease(d3.easeLinear)
-    .on('start', tick);
+    onResizeCanvas();
 
-function tick() {
-    // Push a new data point onto the back.
-    data.push(random());
+    window.addEventListener('resize', onResizeCanvas);
 
-    // Redraw the area.
-    d3.select(this)
-        .attr('d', area)
-        .attr('transform', null)
-        .attr('fill', `hsl(${hue += 10}, 50%, 60%`);
+    var x = d3.scaleLinear()
+        .domain([0, n - 1])
+        .range([0, width]);
 
-    // Slide it to the left.
-    d3.active(this)
-        .attr('transform', `translate(${x(-1)}, 0)`)
-        .transition()
-        .on('start', tick);
+    var y = d3.scaleLinear()
+        .domain([0, 1])
+        .range([height, 0]);
 
-    // Pop the old data point off the front.
-    data.shift();
-}
+    var area = d3.area()
+        .x(function(d, i) { return x(i); })
+        .y0(y(0))
+        .y1(function(d, i) { return y(d); })
+        .context(context);
 
+    document.body.appendChild(canvas);
+
+    requestAnimationFrame(tick);
 </script>
+</body>
+</html>
