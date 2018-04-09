@@ -16,142 +16,204 @@
 <script src="d3.v4.min.js"></script>
 
 <script>
-    const randomNextDatum = (previous) => {
-        let randomWalk  = (Math.random() - 0.5) * VARATION_DISTANCE * 2;
-        if (previous + randomWalk > MAX_Y || previous + randomWalk < MIN_Y) {
+/**
+ * Get the last datum from an array
+ */
+const last = (data) => data[data.length - 1];
+
+/**
+ * Calculate the total elapsed time since the start of the animation
+ */
+const updateClock = (timestamp) => {
+    if (!startTime) {
+        startTime = timestamp;
+    }
+    const totalElapsedTime = timestamp - startTime;
+    const timeSinceLastRun = totalElapsedTime - previousTime;
+    previousTime = totalElapsedTime;
+
+    return timeSinceLastRun;
+}
+
+/**
+ * Reset the canvas area for the next frame
+ */
+const clearCanvas = () => {
+    // context.clearRect(0, 0, width, height);
+    const hue = areas[0].hue;
+    context.fillStyle = `hsl(${hue}, 50%, 85%`;
+    context.rect(0, 0, width, height);
+    context.fill();
+};
+
+class Area {
+    constructor(props){
+        this.MAX_Y = props.MAX_Y || 1;
+        this.MIN_Y = props.MIN_Y || 0;
+        this.WALK_DISTANCE = props.WALK_DISTANCE || 0.03;
+        this.HUE_CHANGE_RATE = props.HUE_CHANGE_RATE || 0.3;
+        this.UPDATE_FREQUENCY = props.UPDATE_FREQUENCY || 1000;
+        this.TICK_FREQUENCY = props.TICK_FREQUENCY || 0.1;
+        this.HUE = props.HUE || 0;
+        this.SATURATION = props.SATURATION || 50;
+        this.LIGHTNESS = props.LIGHTNESS || 60;
+
+        this.hue = 0 + this.HUE;
+        this.startY = (this.MAX_Y + this.MIN_Y) / 2;
+        this.data = [this.startY];
+        this.dataCount = Math.floor(width * this.TICK_FREQUENCY);
+        this.tickDistance = width / this.dataCount;
+        this.xRange = [0, width + this.tickDistance];
+        this.timeSinceLastNewDatum = 0;
+
+        this.x = this.x();
+        this.y = this.y();
+        this.area = this.area();
+
+        this.populateData();
+    }
+
+    update(timeSinceLastRun) {
+        this.updateData(timeSinceLastRun);
+        this.updateRange();
+        this.draw();
+    }
+
+    x() {
+        return d3.scaleLinear()
+            .domain([0, this.dataCount - 1])
+            .range(this.xRange);
+    }
+
+    y() {
+        return d3.scaleLinear()
+            .domain([0, 1])
+            .range([height, 0]);
+    }
+
+    randomNextDatum(previous) {
+        let randomWalk = (Math.random() - 0.5) * this.WALK_DISTANCE * 2;
+        if (previous + randomWalk > this.MAX_Y || previous + randomWalk < this.MIN_Y) {
             randomWalk = -randomWalk;
         }
         return previous + randomWalk;
     }
 
+    addNewDatum() {
+        const nextDatum = this.randomNextDatum(last(this.data));
+        this.data.push(nextDatum);
+    }
 
-    const last = (data) => data[data.length - 1];
-
-
-    const populateData = () => {
-        data.push(randomNextDatum(last(data)));
-        if (data.length < dataCount) {
-            populateData();
+    populateData() {
+        this.addNewDatum();
+        if (this.data.length < this.dataCount) {
+            this.populateData();
         }
-    };
+    }
 
+    area() {
+        return d3.area()
+            .x((d, i) => this.x(i))
+            .y0(this.y(0))
+            .y1((d, i) => this.y(d))
+            .context(context);
+    }
 
-    const drawArea = () => {
+    updateData(timeSinceLastRun) {
+        this.timeSinceLastNewDatum += timeSinceLastRun;
+
+        while (this.timeSinceLastNewDatum > this.UPDATE_FREQUENCY) {
+            this.timeSinceLastNewDatum -= this.UPDATE_FREQUENCY;
+            this.addNewDatum();
+            this.data.shift();
+        }
+    }
+
+    updateRange() {
+        const offsetFraction = this.timeSinceLastNewDatum / this.UPDATE_FREQUENCY;
+        const xOffset = offsetFraction * this.tickDistance;
+        this.x.range( this.xRange.map(d => d - xOffset) );
+    }
+
+    draw() {
         context.beginPath();
-        area(data);
-        context.fillStyle = `hsl(${hue += HUE_CHANGE_RATE}, 50%, 60%`;
+        this.area(this.data);
+        context.fillStyle = `hsl(${this.hue += this.HUE_CHANGE_RATE}, ${this.SATURATION}%, ${this.LIGHTNESS}%`;
         context.fill();
-    };
-    
-    const run = (timestamp) => {
-        if (!startTime) {
-            startTime = timestamp;
-        }
-        const totalElapsedTime = timestamp - startTime;
-        const timeSinceLastRun = totalElapsedTime - previousTime;
-        previousTime = totalElapsedTime;
-        timeSinceLastNewDatum += timeSinceLastRun;
-        
-        while (timeSinceLastNewDatum > UPDATE_FREQUENCY) {
-            timeSinceLastNewDatum -= UPDATE_FREQUENCY;
-            // Push a new data point onto the back.
-            data.push(randomNextDatum(last(data)));
-            // Pop the old data point off the front.
-            data.shift();
-        }
+    }
 
-        const xOffset = (timeSinceLastNewDatum / UPDATE_FREQUENCY) * tickDistance;
-        x.range(xRange.map(d => d - xOffset));
+    onResize() {
+        this.dataCount = Math.floor(width * this.TICK_FREQUENCY);
+        this.tickDistance = width / this.dataCount;
+        this.xRange = [0, width + this.tickDistance];
+        this.x.domain([0, this.dataCount - 1])
+            .range(this.xRange);
+        this.y.range([height, 0]);
+        this.data = [ last(this.data) ];
+        this.populateData();
+    }
+}
 
-        // Clear the canvas
-        context.clearRect(0, 0, width, height);
-
-        // Redraw the area.
-        drawArea();
-
-        context.font = '20px Arial';
-        context.fillStyle = 'black';
-        context.fillText(`last data point: ${last(data).toFixed(3)}`, 50, 50);
-        context.fillText(`totalElapsedTime: ${totalElapsedTime}`, 50, 100);
-        context.fillText(`timeSinceLastNewDatum: ${timeSinceLastNewDatum}`, 50, 150);
-        context.fillText(`xOffset: ${xOffset}`, 50, 200);
-        context.fillText(`x range: ${x.range()}`, 50, 250);
-        context.fillText(`fps: ${1000 / timeSinceLastRun}`, 50, 300);
-        context.fillText(timeSinceLastNewDatum > UPDATE_FREQUENCY, 50, 350);
-        context.fillText(`timeSinceLastRun: ${timeSinceLastRun}`, 50, 400);
-        
-        req = requestAnimationFrame(run);
-    };
+const run = (timestamp) => {
+    clearCanvas();
+    const timeSinceLastRun = updateClock(timestamp);
+    areas.forEach(a => a.update(timeSinceLastRun));
+    req = requestAnimationFrame(run);
+};
 
 
-    const MAX_Y = 1,
-        MIN_Y = 0,
-        VARATION_DISTANCE = 0.03,
-        HUE_CHANGE_RATE = 0.3,
-        UPDATE_FREQUENCY = 1000 / 60,
-        TICK_FREQUENCY = 0.1;
+const AREA_COUNT = 6;
 
-    let hue = 0,
-        data = [0.5],
-        width = window.innerWidth,
-        height = window.innerHeight,
-        dataCount = Math.floor(width * TICK_FREQUENCY),
-        tickDistance = width / dataCount,
-        xRange = [0, width + tickDistance],
-        startTime = 0,
-        previousTime = 0,
-        timeSinceLastNewDatum = 0;
-    
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    
+let width = window.innerWidth,
+    height = window.innerHeight,
+    startTime = 0,
+    previousTime = 0;
+
+const canvas = document.createElement('canvas');
+const context = canvas.getContext('2d');
+
+canvas.width = width;
+canvas.height = height;
+
+const areas = Array.from( Array(AREA_COUNT).keys() )
+    .reverse()
+    .map(d => {
+        const n = d + 1;
+        const range_y = 1 / AREA_COUNT;
+        return new Area({
+            MAX_Y: range_y * (n + 0.5),
+            MIN_Y: range_y * (d - 0.5),
+            UPDATE_FREQUENCY: 50 * n + 300,
+            TICK_FREQUENCY: n / 80 + 0.05,
+            HUE: 2 * n,
+            SATURATION: n + 20,
+            LIGHTNESS: 9 * n + 18,
+        });
+    });
+
+// Update/redraw on window resize
+window.addEventListener('resize', () => {
+    width = window.innerWidth;
+    height = window.innerHeight;
     canvas.width = width;
     canvas.height = height;
-    
-    const x = d3.scaleLinear()
-        .domain([0, dataCount - 1])
-        .range(xRange);
-    
-    const y = d3.scaleLinear()
-        .domain([0, 1])
-        .range([height, 0]);
-    
-    const area = d3.area()
-        .x(function(d, i) { return x(i); })
-        .y0(y(0))
-        .y1(function(d, i) { return y(d); })
-        .context(context);
+    areas.forEach(a => a.onResize());
+});
 
-    populateData();
-    
-    window.addEventListener('resize', () => {
-        width = window.innerWidth;
-        height = window.innerHeight;
-        dataCount = Math.floor(width * TICK_FREQUENCY);
-        tickDistance = width / dataCount;
-        canvas.width = width;
-        canvas.height = height;
-        xRange = [0, width + tickDistance],
-        x.domain([0, dataCount - 1]).range(xRange);
-        y.range([height, 0]);
-        data = [last(data)];
-        populateData();
-    });
-    
-    document.body.appendChild(canvas);
-    
-    let req = requestAnimationFrame(run);
+document.body.appendChild(canvas);
 
-    // Toggle rAF for testing
-    document.addEventListener('click', () => {
-        console.log(req);
-        if (req) {
-            cancelAnimationFrame(req);
-            req = false;
-        } else {
-            req = requestAnimationFrame(run);
-        }
-    });
+// Start animation playback
+let req = requestAnimationFrame(run);
+
+// Toggle play/pause animation on click
+document.addEventListener('click', () => {
+    if (req) {
+        cancelAnimationFrame(req);
+        req = false;
+    } else {
+        req = requestAnimationFrame(run);
+    }
+});
 </script>
 </body>
 </html>
