@@ -66,9 +66,9 @@ class Area {
         this.xRange = [0, width + this.tickDistance];
         this.timeSinceLastNewDatum = 0;
 
-        this.x = this.x();
-        this.y = this.y();
-        this.area = this.area();
+        this.x = this.xScale();
+        this.y = this.yScale();
+        this.area = this.areaScale();
 
         this.populateData();
     }
@@ -79,16 +79,24 @@ class Area {
         this.draw();
     }
 
-    x() {
+    xScale() {
         return d3.scaleLinear()
             .domain([0, this.dataCount - 1])
             .range(this.xRange);
     }
 
-    y() {
+    yScale() {
         return d3.scaleLinear()
             .domain([0, 1])
             .range([height, 0]);
+    }
+
+    areaScale() {
+        return d3.area()
+            .x((d, i) => this.x(i))
+            .y0(this.y(0))
+            .y1((d, i) => this.y(d))
+            .context(context);
     }
 
     randomNextDatum(previous) {
@@ -109,14 +117,6 @@ class Area {
         if (this.data.length < this.dataCount) {
             this.populateData();
         }
-    }
-
-    area() {
-        return d3.area()
-            .x((d, i) => this.x(i))
-            .y0(this.y(0))
-            .y1((d, i) => this.y(d))
-            .context(context);
     }
 
     updateData(timeSinceLastRun) {
