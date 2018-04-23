@@ -17,6 +17,11 @@
 
 <script>
 /**
+ * Generate CSS HSL (hue/saturation/lightness) colour strings
+ */
+const hsl = (h, s, l) => `hsl(${h}, ${s}%, ${l}%`;
+
+/**
  * Get the last datum from an array
  */
 const last = (data) => data[data.length - 1];
@@ -41,7 +46,15 @@ const updateClock = (timestamp) => {
 const clearCanvas = () => {
     // context.clearRect(0, 0, width, height);
     const hue = areas[0].hue;
-    context.fillStyle = `hsl(${hue}, 50%, 85%`;
+    // context.fillStyle = `hsl(${hue}, 50%, 85%`;
+
+    const gradient = context.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, hsl(hue, 30, 83));
+    gradient.addColorStop(0.5, hsl(hue, 50, 100));
+    context.fillStyle = gradient;
+    // context.filter = `blur(${this.BLUR}px)`;
+    // context.fill();
+
     context.rect(0, 0, width, height);
     context.fill();
 };
@@ -57,6 +70,7 @@ class Area {
         this.HUE = props.HUE || 0;
         this.SATURATION = props.SATURATION || 50;
         this.LIGHTNESS = props.LIGHTNESS || 60;
+        this.BLUR = props.BLUR || 1;
 
         this.hue = 0 + this.HUE;
         this.startY = (this.MAX_Y + this.MIN_Y) / 2;
@@ -138,7 +152,16 @@ class Area {
     draw() {
         context.beginPath();
         this.area(this.data);
-        context.fillStyle = `hsl(${this.hue += this.HUE_CHANGE_RATE}, ${this.SATURATION}%, ${this.LIGHTNESS}%`;
+        this.fill();
+    }
+
+    fill() {
+        const hue = this.hue += this.HUE_CHANGE_RATE;
+        const gradient = context.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, hsl(hue, this.SATURATION, this.LIGHTNESS - 10));
+        gradient.addColorStop(1, hsl(hue, this.SATURATION, this.LIGHTNESS  + 10));
+        context.fillStyle = gradient;
+        context.filter = `blur(${this.BLUR}px)`;
         context.fill();
     }
 
@@ -179,15 +202,17 @@ const areas = Array.from( Array(AREA_COUNT).keys() )
     .reverse()
     .map(d => {
         const n = d + 1;
-        const range_y = 1 / AREA_COUNT;
+        const range_y = 0.8 / AREA_COUNT;
         return new Area({
-            MAX_Y: range_y * (n + 0.5),
-            MIN_Y: range_y * (d - 0.5),
+            MAX_Y: range_y * (n + 0.4) + 0.1,
+            MIN_Y: range_y * (d - 0.4) + 0.1,
+            WALK_DISTANCE: 0.03 / n + 0.005,
             UPDATE_FREQUENCY: 50 * n + 300,
             TICK_FREQUENCY: n / 80 + 0.05,
             HUE: 2 * n,
             SATURATION: n + 20,
-            LIGHTNESS: 9 * n + 18,
+            LIGHTNESS: 9 * n + 25,
+            BLUR: n * 0.1 + 0.5,
         });
     });
 
@@ -205,8 +230,11 @@ document.body.appendChild(canvas);
 // Start animation playback
 let req = requestAnimationFrame(run);
 
-// Toggle play/pause animation on click
-document.addEventListener('click', () => {
+// Toggle play/pause animation on spacebar
+document.addEventListener('keydown', (e) => {
+    if (e.keyCode !== 32) {
+        return;
+    }
     if (req) {
         cancelAnimationFrame(req);
         req = false;
