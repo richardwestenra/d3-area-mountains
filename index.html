@@ -45,12 +45,13 @@ const updateClock = (timestamp) => {
  */
 const clearCanvas = () => {
     // context.clearRect(0, 0, width, height);
-    const hue = areas[0].hue;
     // context.fillStyle = `hsl(${hue}, 50%, 85%`;
+    const c = last(COLORS);
+    const hue = areas[0].hue + c[0];
 
     const gradient = context.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, hsl(hue, 30, 83));
-    gradient.addColorStop(0.5, hsl(hue, 50, 100));
+    gradient.addColorStop(0, hsl(hue, c[1], c[2]));
+    gradient.addColorStop(0.5, hsl(hue, c[1], 100));
     context.fillStyle = gradient;
     // context.filter = `blur(${this.BLUR}px)`;
     // context.fill();
@@ -64,7 +65,7 @@ class Area {
         this.MAX_Y = props.MAX_Y || 1;
         this.MIN_Y = props.MIN_Y || 0;
         this.WALK_DISTANCE = props.WALK_DISTANCE || 0.03;
-        this.HUE_CHANGE_RATE = props.HUE_CHANGE_RATE || 0.3;
+        this.HUE_CHANGE_RATE = props.HUE_CHANGE_RATE || 0.2;
         this.UPDATE_FREQUENCY = props.UPDATE_FREQUENCY || 1000;
         this.TICK_FREQUENCY = props.TICK_FREQUENCY || 0.1;
         this.HUE = props.HUE || 0;
@@ -72,7 +73,7 @@ class Area {
         this.LIGHTNESS = props.LIGHTNESS || 60;
         this.BLUR = props.BLUR || 1;
 
-        this.hue = 0 + this.HUE;
+        this.hue = 0;
         this.startY = (this.MAX_Y + this.MIN_Y) / 2;
         this.data = [this.startY];
         this.dataCount = Math.floor(width * this.TICK_FREQUENCY);
@@ -150,13 +151,14 @@ class Area {
     }
 
     draw() {
+        // this.hue += this.HUE_CHANGE_RATE;
         context.beginPath();
         this.area(this.data);
         this.fill();
     }
 
     fill() {
-        const hue = this.hue += this.HUE_CHANGE_RATE;
+        const hue = this.hue + this.HUE;
         const gradient = context.createLinearGradient(0, 0, 0, height);
         gradient.addColorStop(0, hsl(hue, this.SATURATION, this.LIGHTNESS - 10));
         gradient.addColorStop(1, hsl(hue, this.SATURATION, this.LIGHTNESS  + 10));
@@ -185,7 +187,27 @@ const run = (timestamp) => {
 };
 
 
-const AREA_COUNT = 6;
+// const AREA_COUNT = 6;
+// const COLORS = ['#33152C', '#5F0B32', '#830B34', '#CB3142', '#EB4840', '#FC6E48', '#FDD4BE'];
+// const COLORS = [
+//     'hsl(314, 42%, 14%)',
+//     'hsl(332, 79%, 21%)',
+//     'hsl(340, 84%, 28%)',
+//     'hsl(353, 61%, 49%)',
+//     'hsl(3, 81%, 58%)',
+//     'hsl(13, 97%, 64%)',
+//     'hsl(21, 94%, 87%)'
+// ];
+const COLORS = [
+    [314, 42, 14],
+    [332, 79, 21],
+    [340, 84, 28],
+    [353, 61, 49],
+    [3, 81, 58],
+    [13, 97, 64],
+    [21, 94, 87],
+];
+const AREA_COUNT = COLORS.length - 1;
 
 let width = window.innerWidth,
     height = window.innerHeight,
@@ -209,9 +231,9 @@ const areas = Array.from( Array(AREA_COUNT).keys() )
             WALK_DISTANCE: 0.03 / n + 0.005,
             UPDATE_FREQUENCY: 50 * n + 300,
             TICK_FREQUENCY: n / 80 + 0.05,
-            HUE: 2 * n,
-            SATURATION: n + 20,
-            LIGHTNESS: 9 * n + 25,
+            HUE: COLORS[n][0],
+            SATURATION: COLORS[n][1],
+            LIGHTNESS: COLORS[n][2],
             BLUR: n * 0.1 + 0.5,
         });
     });
