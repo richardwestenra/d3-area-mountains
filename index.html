@@ -17,9 +17,9 @@
 
 <script>
 /**
- * Generate CSS HSL (hue/saturation/lightness) colour strings
+ * Generate RGB colour strings from HCL (hue/chroma/lightness)
  */
-const hsl = (h, s, l) => `hsl(${h}, ${s}%, ${l}%`;
+const hcl = (h, c, l) => d3.hcl(h, c, l).toString();
 
 /**
  * Get the last datum from an array
@@ -44,13 +44,10 @@ const updateClock = (timestamp) => {
  * Reset the canvas area for the next frame
  */
 const clearCanvas = () => {
-    // context.clearRect(0, 0, width, height);
     const hue = areas[0].hue;
-    // context.fillStyle = `hsl(${hue}, 50%, 85%`;
-
     const gradient = context.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, hsl(hue, 30, 83));
-    gradient.addColorStop(0.5, hsl(hue, 50, 100));
+    gradient.addColorStop(0, hcl(hue, 50, 83));
+    gradient.addColorStop(0.5, hcl(hue, 50, 100));
     context.fillStyle = gradient;
     // context.filter = `blur(${this.BLUR}px)`;
     // context.fill();
@@ -63,12 +60,12 @@ class Area {
     constructor(props){
         this.MAX_Y = props.MAX_Y || 1;
         this.MIN_Y = props.MIN_Y || 0;
-        this.WALK_DISTANCE = props.WALK_DISTANCE || 0.03;
+        this.WALK_DISTANCE = props.WALK_DISTANCE || 0.1;
         this.HUE_CHANGE_RATE = props.HUE_CHANGE_RATE || 0.3;
         this.UPDATE_FREQUENCY = props.UPDATE_FREQUENCY || 1000;
         this.TICK_FREQUENCY = props.TICK_FREQUENCY || 0.1;
         this.HUE = props.HUE || 0;
-        this.SATURATION = props.SATURATION || 50;
+        this.CHROMA = props.CHROMA || 50;
         this.LIGHTNESS = props.LIGHTNESS || 60;
         this.BLUR = props.BLUR || 1;
 
@@ -158,8 +155,8 @@ class Area {
     fill() {
         const hue = this.hue += this.HUE_CHANGE_RATE;
         const gradient = context.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, hsl(hue, this.SATURATION, this.LIGHTNESS - 10));
-        gradient.addColorStop(1, hsl(hue, this.SATURATION, this.LIGHTNESS  + 10));
+        gradient.addColorStop(0, hcl(hue, this.CHROMA, this.LIGHTNESS - 10));
+        gradient.addColorStop(1, hcl(hue, this.CHROMA, this.LIGHTNESS  + 10));
         context.fillStyle = gradient;
         context.filter = `blur(${this.BLUR}px)`;
         context.fill();
@@ -210,7 +207,6 @@ const areas = Array.from( Array(AREA_COUNT).keys() )
             UPDATE_FREQUENCY: 50 * n + 300,
             TICK_FREQUENCY: n / 80 + 0.05,
             HUE: 2 * n,
-            SATURATION: n + 20,
             LIGHTNESS: 9 * n + 25,
             BLUR: n * 0.1 + 0.5,
         });
@@ -242,6 +238,7 @@ document.addEventListener('keydown', (e) => {
         req = requestAnimationFrame(run);
     }
 });
+
 </script>
 </body>
 </html>
