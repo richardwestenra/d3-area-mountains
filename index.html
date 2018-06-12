@@ -65,20 +65,30 @@ class Area {
         this.CHROMA = props.CHROMA || 50;
         this.LIGHTNESS = props.LIGHTNESS || 60;
         this.BLUR = props.BLUR || 1;
+        this.EXTRA_TICKS = 10;
 
         this.hue = 0 + this.HUE;
         this.startY = (this.MAX_Y + this.MIN_Y) / 2;
         this.data = [this.startY];
         this.dataCount = Math.floor(width * this.TICK_FREQUENCY);
-        this.tickDistance = width / this.dataCount;
-        this.xRange = [0, width + this.tickDistance];
         this.timeSinceLastNewDatum = 0;
+
+        this.setupDimensions();
 
         this.x = this.xScale();
         this.y = this.yScale();
         this.area = this.areaScale();
 
         this.populateData();
+    }
+
+    setupDimensions() {
+        this.tickDistance = width / this.dataCount;
+        this.extraTickDistance = this.tickDistance * this.EXTRA_TICKS;
+        this.xOffset = offset.x * this.extraTickDistance - this.extraTickDistance / 2;
+        this.yOffset = offset.y * this.extraTickDistance - this.extraTickDistance / 2;
+        this.xRange = [0 + this.xOffset, width + this.extraTickDistance + this.xOffset];
+        this.yRange = [height + this.yOffset, this.yOffset];
     }
 
     update(timeSinceLastRun) {
@@ -96,7 +106,7 @@ class Area {
     yScale() {
         return d3.scaleLinear()
             .domain([0, 1])
-            .range([height, 0]);
+            .range(this.yRange);
     }
 
     areaScale() {
@@ -169,6 +179,12 @@ class Area {
         this.data = [ last(this.data) ];
         this.populateData();
     }
+
+    onMousemove() {
+        this.setupDimensions();
+        this.x.range(this.xRange);
+        this.y.range(this.yRange);
+    }
 }
 
 const run = (timestamp) => {
@@ -185,6 +201,11 @@ let width = window.innerWidth,
     height = window.innerHeight,
     startTime = 0,
     previousTime = 0;
+
+const offset = {
+    x: 0.5,
+    y: 0.5,
+};
 
 const canvas = document.createElement('canvas');
 const context = canvas.getContext('2d');
@@ -217,6 +238,12 @@ window.addEventListener('resize', () => {
     canvas.width = width;
     canvas.height = height;
     areas.forEach(a => a.onResize());
+});
+
+document.addEventListener('mousemove', (e) => {
+    offset.y = e.clientY / height;
+    offset.x = e.clientX / width;
+    areas.forEach(a => a.onMousemove());
 });
 
 document.body.appendChild(canvas);
