@@ -45,9 +45,11 @@ const updateClock = (timestamp) => {
  */
 const clearCanvas = () => {
     const hue = areas[0].hue;
+    const chroma = 18;
+    const lightness = [83, 100];
     const gradient = context.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, hcl(hue, 50, 83));
-    gradient.addColorStop(0.5, hcl(hue, 50, 100));
+    gradient.addColorStop(0, hcl(hue, chroma, lightness[0]));
+    gradient.addColorStop(0.5, hcl(hue, chroma, lightness[1]));
     context.fillStyle = gradient;
     context.rect(0, 0, width, height);
     context.fill();
@@ -225,7 +227,7 @@ const areas = Array.from( Array(AREA_COUNT).keys() )
             UPDATE_FREQUENCY: 50 * n + 300,
             TICK_FREQUENCY: n / 80 + 0.05,
             HUE: 2 * n,
-            CHROMA: 50 - n * 3,
+            CHROMA: 50 - n * 5,
             LIGHTNESS: 9 * n + 25,
             BLUR: n * 0.1 + 0.5,
         });
