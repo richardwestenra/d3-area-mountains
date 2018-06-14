@@ -65,7 +65,10 @@ class Area {
         this.CHROMA = 50;
         this.LIGHTNESS = 60;
         this.BLUR = 1;
-        this.EXTRA_TICKS = 10;
+        this.PARALLAX = {
+            x: width * 0.1,
+            y: height * 0.1,
+        }
 
         // Override with props
         for (let prop in props) {
@@ -89,12 +92,15 @@ class Area {
     }
 
     setupDimensions() {
-        this.tickDistance = width / this.dataCount;
-        this.extraTickDistance = this.tickDistance * this.EXTRA_TICKS;
-        this.xOffset = offset.x * this.extraTickDistance - this.extraTickDistance / 2;
-        this.yOffset = offset.y * this.extraTickDistance - this.extraTickDistance / 2;
-        this.xRange = [0 + this.xOffset, width + this.extraTickDistance + this.xOffset];
-        this.yRange = [height + this.yOffset, this.yOffset];
+        const { x, y } = this.PARALLAX;
+
+        const offset = {
+            x: dx => dx + (position.x * x),
+            y: dy => dy + (position.y * y)
+        };
+
+        this.xRange = [-x, width + x].map(offset.x);
+        this.yRange = [height + y, -y].map(offset.y);
     }
 
     update(timeSinceLastRun) {
@@ -125,7 +131,11 @@ class Area {
 
     randomNextDatum(previous) {
         let randomWalk = (Math.random() - 0.5) * this.WALK_DISTANCE * 2;
-        if (previous + randomWalk > this.MAX_Y || previous + randomWalk < this.MIN_Y) {
+        const boundsExceeded = {
+            max: previous + randomWalk > this.MAX_Y,
+            min: previous + randomWalk < this.MIN_Y
+        };
+        if (boundsExceeded.max || boundsExceeded.min) {
             randomWalk = -randomWalk;
         }
         return previous + randomWalk;
@@ -154,6 +164,7 @@ class Area {
     }
 
     updateRange() {
+        this.tickDistance = width / this.dataCount;
         const offsetFraction = this.timeSinceLastNewDatum / this.UPDATE_FREQUENCY;
         const xOffset = offsetFraction * this.tickDistance;
         this.x.range( this.xRange.map(d => d - xOffset) );
@@ -177,11 +188,10 @@ class Area {
 
     onResize() {
         this.dataCount = Math.floor(width * this.TICK_FREQUENCY);
-        this.tickDistance = width / this.dataCount;
-        this.xRange = [0, width + this.tickDistance];
+        this.setupDimensions();
         this.x.domain([0, this.dataCount - 1])
             .range(this.xRange);
-        this.y.range([height, 0]);
+        this.y.range(this.yRange);
         this.data = [ last(this.data) ];
         this.populateData();
     }
@@ -209,7 +219,7 @@ let width = window.innerWidth,
     startTime = 0,
     previousTime = 0;
 
-const offset = {
+const position = {
     x: 0.5,
     y: 0.5,
 };
@@ -220,19 +230,24 @@ const context = canvas.getContext('2d');
 canvas.width = width;
 canvas.height = height;
 
-const areaScaleLinear = () => d3.scaleLinear()
-    .domain(d3.extent(areaData));
+const areaScaleLinear = range => d3.scaleLinear()
+    .domain(d3.extent(areaData))
+    .range(range);
 
 const scale = {
-    maxY: areaScaleLinear().range([0.3, 0.95]),
-    minY: areaScaleLinear().range([0.1, 0.8]),
-    walkDistance: areaScaleLinear().range([0.03, 0.01]),
-    updateFrequency: areaScaleLinear().range([350, 600]),
-    tickFrequency: areaScaleLinear().range([0.0625, 0.125]),
-    hue: areaScaleLinear().range([2, 12]),
-    chroma: areaScaleLinear().range([45, 20]),
-    lightness: areaScaleLinear().range([30, 80]),
-    blur: areaScaleLinear().range([0.6, 1.1]),
+    maxY: areaScaleLinear([0.4, 0.9]),
+    minY: areaScaleLinear([0.15, 0.8]),
+    walkDistance: areaScaleLinear([0.03, 0.01]),
+    updateFrequency: areaScaleLinear([350, 600]),
+    tickFrequency: areaScaleLinear([0.0625, 0.125]),
+    hue: areaScaleLinear([2, 12]),
+    chroma: areaScaleLinear([45, 20]),
+    lightness: areaScaleLinear([30, 80]),
+    blur: areaScaleLinear([0.6, 1.1]),
+    parallax: d => ({
+        x: areaScaleLinear([width * 0.1, width * 0.01])(d),
+        y: areaScaleLinear([height * 0.1, height * 0.01])(d),
+    })
 };
 
 const areas = areaData.map(d => {
@@ -247,6 +262,7 @@ const areas = areaData.map(d => {
             CHROMA: scale.chroma(d),
             LIGHTNESS: scale.lightness(d),
             BLUR: scale.blur(d),
+            PARALLAX: scale.parallax(d)
         });
     });
 
@@ -260,8 +276,8 @@ window.addEventListener('resize', () => {
 });
 
 document.addEventListener('mousemove', (e) => {
-    offset.y = e.clientY / height;
-    offset.x = e.clientX / width;
+    position.y = e.clientY / height;
+    position.x = e.clientX / width;
     areas.forEach(a => a.onMousemove());
 });
 
