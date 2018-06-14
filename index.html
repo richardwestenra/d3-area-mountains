@@ -52,6 +52,10 @@ const clearCanvas = () => {
     context.fill();
 };
 
+/**
+ * Create a single area/mountain range section
+ * Public methods: update, onResize and onMouseMove
+ */
 class Area {
     constructor(props){
         // Establish default values
@@ -72,21 +76,15 @@ class Area {
             this[prop] = props[prop];
         }
 
-        // Establish calculated & mutable values
-        this.calculateDimensions();
-
+        // Establish mutable values
         this.hue = 0 + this.HUE;
-        this.startY = (this.MAX_Y + this.MIN_Y) / 2;
-        this.data = [this.startY];
-        this.dataCount = Math.floor(this.width * this.TICK_FREQUENCY);
         this.timeSinceLastNewDatum = 0;
 
+        // Calculate values and perform initial setup
+        this.calculateDimensions();
+        this.setupData();
         this.calculateRanges();
-
-        this.x = this.xScale();
-        this.y = this.yScale();
-        this.area = this.areaScale();
-
+        this.createScales();
         this.populateData();
     }
 
@@ -115,10 +113,16 @@ class Area {
         this.yRange = [this.height - y, -y].map(offset.y);
     }
 
-    update(timeSinceLastRun) {
-        this.updateData(timeSinceLastRun);
-        this.updateXOffset();
-        this.draw();
+    setupData() {
+        const startY = (this.MAX_Y + this.MIN_Y) / 2;
+        this.data = [startY];
+        this.dataCount = Math.floor(this.width * this.TICK_FREQUENCY);
+    }
+
+    createScales() {
+        this.x = this.xScale();
+        this.y = this.yScale();
+        this.area = this.areaScale();
     }
 
     xScale() {
@@ -200,12 +204,9 @@ class Area {
 
     onResize() {
         this.calculateDimensions();
-        this.dataCount = Math.floor(this.width * this.TICK_FREQUENCY);
+        this.setupData();
         this.calculateRanges();
-        this.x.domain([0, this.dataCount - 1])
-            .range(this.xRange);
-        this.y.range(this.yRange);
-        this.data = [ last(this.data) ];
+        this.createScales();
         this.populateData();
     }
 
@@ -213,6 +214,12 @@ class Area {
         this.calculateRanges();
         this.x.range(this.xRange);
         this.y.range(this.yRange);
+    }
+
+    update(timeSinceLastRun) {
+        this.updateData(timeSinceLastRun);
+        this.updateXOffset();
+        this.draw();
     }
 }
 
