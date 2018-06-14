@@ -65,10 +65,7 @@ class Area {
         this.CHROMA = 50;
         this.LIGHTNESS = 60;
         this.BLUR = 1;
-        this.PARALLAX = {
-            x: width * 0.1,
-            y: height * 0.1,
-        }
+        this.PARALLAX = { x: 0.1, y: 0.1 };
 
         // Override with props
         for (let prop in props) {
@@ -76,10 +73,12 @@ class Area {
         }
 
         // Establish calculated & mutable values
+        this.calculateDimensions();
+
         this.hue = 0 + this.HUE;
         this.startY = (this.MAX_Y + this.MIN_Y) / 2;
         this.data = [this.startY];
-        this.dataCount = Math.floor(width * this.TICK_FREQUENCY);
+        this.dataCount = Math.floor(this.width * this.TICK_FREQUENCY);
         this.timeSinceLastNewDatum = 0;
 
         this.calculateRanges();
@@ -91,21 +90,34 @@ class Area {
         this.populateData();
     }
 
+    calculateDimensions() {
+        const { x, y } = this.parallax();
+        this.width = width + x * 2;
+        this.height = height + y * 2;
+    }
+
+    parallax() {
+        return {
+            x: this.PARALLAX.x * width,
+            y: this.PARALLAX.y * height,
+        };
+    }
+
     calculateRanges() {
-        const { x, y } = this.PARALLAX;
+        const { x, y } = this.parallax();
 
         const offset = {
             x: dx => dx + (position.x * x),
             y: dy => dy + (position.y * y)
         };
 
-        this.xRange = [-x, width + x].map(offset.x);
-        this.yRange = [height + y, -y].map(offset.y);
+        this.xRange = [-x, this.width - x].map(offset.x);
+        this.yRange = [this.height - y, -y].map(offset.y);
     }
 
     update(timeSinceLastRun) {
         this.updateData(timeSinceLastRun);
-        this.updateRange();
+        this.updateXOffset();
         this.draw();
     }
 
@@ -163,8 +175,8 @@ class Area {
         }
     }
 
-    updateRange() {
-        this.tickDistance = width / this.dataCount;
+    updateXOffset() {
+        this.tickDistance = this.width / this.dataCount;
         const offsetFraction = this.timeSinceLastNewDatum / this.UPDATE_FREQUENCY;
         const xOffset = offsetFraction * this.tickDistance;
         this.x.range( this.xRange.map(d => d - xOffset) );
@@ -187,7 +199,8 @@ class Area {
     }
 
     onResize() {
-        this.dataCount = Math.floor(width * this.TICK_FREQUENCY);
+        this.calculateDimensions();
+        this.dataCount = Math.floor(this.width * this.TICK_FREQUENCY);
         this.calculateRanges();
         this.x.domain([0, this.dataCount - 1])
             .range(this.xRange);
@@ -245,8 +258,8 @@ const scale = {
     lightness: areaScaleLinear([30, 80]),
     blur: areaScaleLinear([0.6, 1.1]),
     parallax: d => ({
-        x: areaScaleLinear([width * 0.1, width * 0.01])(d),
-        y: areaScaleLinear([height * 0.1, height * 0.01])(d),
+        x: areaScaleLinear([0.1, 0.01])(d),
+        y: areaScaleLinear([0.1, 0.01])(d),
     })
 };
 
