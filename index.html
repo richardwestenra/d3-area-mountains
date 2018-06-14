@@ -82,7 +82,7 @@ class Area {
         this.dataCount = Math.floor(width * this.TICK_FREQUENCY);
         this.timeSinceLastNewDatum = 0;
 
-        this.setupDimensions();
+        this.calculateRanges();
 
         this.x = this.xScale();
         this.y = this.yScale();
@@ -91,7 +91,7 @@ class Area {
         this.populateData();
     }
 
-    setupDimensions() {
+    calculateRanges() {
         const { x, y } = this.PARALLAX;
 
         const offset = {
@@ -188,7 +188,7 @@ class Area {
 
     onResize() {
         this.dataCount = Math.floor(width * this.TICK_FREQUENCY);
-        this.setupDimensions();
+        this.calculateRanges();
         this.x.domain([0, this.dataCount - 1])
             .range(this.xRange);
         this.y.range(this.yRange);
@@ -197,7 +197,7 @@ class Area {
     }
 
     onMousemove() {
-        this.setupDimensions();
+        this.calculateRanges();
         this.x.range(this.xRange);
         this.y.range(this.yRange);
     }
