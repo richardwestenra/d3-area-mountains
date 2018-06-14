@@ -57,18 +57,25 @@ const clearCanvas = () => {
 
 class Area {
     constructor(props){
-        this.MAX_Y = props.MAX_Y || 1;
-        this.MIN_Y = props.MIN_Y || 0;
-        this.WALK_DISTANCE = props.WALK_DISTANCE || 0.1;
-        this.HUE_CHANGE_RATE = props.HUE_CHANGE_RATE || 0.3;
-        this.UPDATE_FREQUENCY = props.UPDATE_FREQUENCY || 1000;
-        this.TICK_FREQUENCY = props.TICK_FREQUENCY || 0.1;
-        this.HUE = props.HUE || 0;
-        this.CHROMA = props.CHROMA || 50;
-        this.LIGHTNESS = props.LIGHTNESS || 60;
-        this.BLUR = props.BLUR || 1;
+        // Establish default values
+        this.MAX_Y = 1;
+        this.MIN_Y = 0;
+        this.WALK_DISTANCE = 0.1;
+        this.UPDATE_FREQUENCY = 1000;
+        this.TICK_FREQUENCY = 0.1;
+        this.HUE = 0;
+        this.HUE_CHANGE_RATE = 0.3;
+        this.CHROMA = 50;
+        this.LIGHTNESS = 60;
+        this.BLUR = 1;
         this.EXTRA_TICKS = 10;
 
+        // Override with props
+        for (let prop in props) {
+            this[prop] = props[prop];
+        }
+
+        // Establish calculated & mutable values
         this.hue = 0 + this.HUE;
         this.startY = (this.MAX_Y + this.MIN_Y) / 2;
         this.data = [this.startY];
@@ -198,6 +205,7 @@ const run = (timestamp) => {
 
 
 const AREA_COUNT = 6;
+const areaData = Array.from(Array(AREA_COUNT).keys()).reverse();
 
 let width = window.innerWidth,
     height = window.innerHeight,
@@ -215,21 +223,33 @@ const context = canvas.getContext('2d');
 canvas.width = width;
 canvas.height = height;
 
-const areas = Array.from( Array(AREA_COUNT).keys() )
-    .reverse()
-    .map(d => {
-        const n = d + 1;
-        const range_y = 0.8 / AREA_COUNT;
+const areaScaleLinear = () => d3.scaleLinear()
+    .domain(d3.extent(areaData));
+
+const scale = {
+    maxY: areaScaleLinear().range([0.3, 0.95]),
+    minY: areaScaleLinear().range([0.1, 0.8]),
+    walkDistance: areaScaleLinear().range([0.03, 0.01]),
+    updateFrequency: areaScaleLinear().range([350, 600]),
+    tickFrequency: areaScaleLinear().range([0.0625, 0.125]),
+    hue: areaScaleLinear().range([2, 12]),
+    chroma: areaScaleLinear().range([45, 20]),
+    lightness: areaScaleLinear().range([30, 80]),
+    blur: areaScaleLinear().range([0.6, 1.1]),
+};
+
+const areas = areaData.map(d => {
         return new Area({
-            MAX_Y: range_y * (n + 0.4) + 0.1,
-            MIN_Y: range_y * (d - 0.4) + 0.1,
-            WALK_DISTANCE: 0.03 / n + 0.005,
-            UPDATE_FREQUENCY: 50 * n + 300,
-            TICK_FREQUENCY: n / 80 + 0.05,
-            HUE: 2 * n,
-            CHROMA: 50 - n * 5,
-            LIGHTNESS: 9 * n + 25,
-            BLUR: n * 0.1 + 0.5,
+            id: d,
+            MAX_Y: scale.maxY(d),
+            MIN_Y: scale.minY(d),
+            WALK_DISTANCE: scale.walkDistance(d),
+            UPDATE_FREQUENCY: scale.updateFrequency(d),
+            TICK_FREQUENCY: scale.tickFrequency(d),
+            HUE: scale.hue(d),
+            CHROMA: scale.chroma(d),
+            LIGHTNESS: scale.lightness(d),
+            BLUR: scale.blur(d),
         });
     });
 
