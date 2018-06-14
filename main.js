@@ -218,8 +218,61 @@ const run = timestamp => {
   req = requestAnimationFrame(run);
 };
 
-const AREA_COUNT = 6;
-const areaData = Array.from(Array(AREA_COUNT).keys()).reverse();
+const makeAreas = c => {
+  const areaData = Array.from(Array(config.areaCount).keys()).reverse();
+
+  const areaScaleLinear = d => range =>
+    d3
+      .scaleLinear()
+      .domain(d3.extent(areaData))
+      .range(range)(d);
+
+  return areaData.map(d => {
+    const a = areaScaleLinear(d);
+    return new Area({
+      id: d,
+      MAX_Y: a([c.maxY_0, c.maxY_1]),
+      MIN_Y: a([c.minY_0, c.minY_1]),
+      WALK_DISTANCE: a([c.walkDistance_0, c.walkDistance_1]),
+      UPDATE_FREQUENCY: a([c.updateFrequency_0, c.updateFrequency_1]),
+      TICK_FREQUENCY: a([c.tickFrequency_0, c.tickFrequency_1]),
+      HUE: a([c.hue_0, c.hue_1]),
+      CHROMA: a([c.chroma_0, c.chroma_1]),
+      LIGHTNESS: a([c.lightness_0, c.lightness_1]),
+      BLUR: a([c.blur_0, c.blur_1]),
+      PARALLAX: {
+        x: a([c.xParallax_0, c.xParallax_1]),
+        y: a([c.yParallax_0, c.yParallax_1])
+      }
+    });
+  });
+};
+
+const config = {
+  areaCount: 6,
+  maxY_0: 0.4,
+  maxY_1: 0.9,
+  minY_0: 0.15,
+  minY_1: 0.8,
+  walkDistance_0: 0.03,
+  walkDistance_1: 0.01,
+  updateFrequency_0: 350,
+  updateFrequency_1: 600,
+  tickFrequency_0: 0.0625,
+  tickFrequency_1: 0.125,
+  hue_0: 2,
+  hue_1: 12,
+  chroma_0: 45,
+  chroma_1: 20,
+  lightness_0: 30,
+  lightness_1: 80,
+  blur_0: 0.6,
+  blur_1: 1.1,
+  xParallax_0: 0.1,
+  xParallax_1: 0.01,
+  yParallax_0: 0.1,
+  yParallax_1: 0.01
+};
 
 let width = window.innerWidth,
   height = window.innerHeight,
@@ -237,43 +290,7 @@ const context = canvas.getContext('2d');
 canvas.width = width;
 canvas.height = height;
 
-const areaScaleLinear = range =>
-  d3
-    .scaleLinear()
-    .domain(d3.extent(areaData))
-    .range(range);
-
-const scale = {
-  maxY: areaScaleLinear([0.4, 0.9]),
-  minY: areaScaleLinear([0.15, 0.8]),
-  walkDistance: areaScaleLinear([0.03, 0.01]),
-  updateFrequency: areaScaleLinear([350, 600]),
-  tickFrequency: areaScaleLinear([0.0625, 0.125]),
-  hue: areaScaleLinear([2, 12]),
-  chroma: areaScaleLinear([45, 20]),
-  lightness: areaScaleLinear([30, 80]),
-  blur: areaScaleLinear([0.6, 1.1]),
-  parallax: d => ({
-    x: areaScaleLinear([0.1, 0.01])(d),
-    y: areaScaleLinear([0.1, 0.01])(d)
-  })
-};
-
-const areas = areaData.map(d => {
-  return new Area({
-    id: d,
-    MAX_Y: scale.maxY(d),
-    MIN_Y: scale.minY(d),
-    WALK_DISTANCE: scale.walkDistance(d),
-    UPDATE_FREQUENCY: scale.updateFrequency(d),
-    TICK_FREQUENCY: scale.tickFrequency(d),
-    HUE: scale.hue(d),
-    CHROMA: scale.chroma(d),
-    LIGHTNESS: scale.lightness(d),
-    BLUR: scale.blur(d),
-    PARALLAX: scale.parallax(d)
-  });
-});
+let areas = makeAreas(config);
 
 // Update/redraw on window resize
 window.addEventListener('resize', () => {
@@ -307,3 +324,12 @@ document.addEventListener('keydown', e => {
     req = requestAnimationFrame(run);
   }
 });
+
+window.onload = function() {
+  const gui = new dat.GUI();
+  for (let key in config) {
+    gui.add(config, key).onChange(() => {
+      areas = makeAreas(config);
+    });
+  }
+};
