@@ -1,4 +1,35 @@
 /**
+ * Constants [current-value, [min, max]]
+ */
+const config = {
+  areaCount: [6, [1, 50]],
+  maxY_0: [0.4, [0, 1]],
+  maxY_1: [0.9, [0, 1]],
+  minY_0: [0.15, [0, 1]],
+  minY_1: [0.8, [0, 1]],
+  walkDistance_0: [0.03, [0, 1]],
+  walkDistance_1: [0.01, [0, 1]],
+  updateFrequency_0: [350, [1, 2000]],
+  updateFrequency_1: [600, [1, 2000]],
+  tickFrequency_0: [0.0625, [0, 1]],
+  tickFrequency_1: [0.125, [0, 1]],
+  hue_0: [2, [0, 360]],
+  hue_1: [12, [0, 360]],
+  hue_change_rate_0: [0.3, [0, 5]],
+  hue_change_rate_1: [0.3, [0, 5]],
+  chroma_0: [45, [0, 100]],
+  chroma_1: [20, [0, 100]],
+  lightness_0: [30, [0, 100]],
+  lightness_1: [80, [0, 100]],
+  blur_0: [0.6, [0, 10]],
+  blur_1: [1.1, [0, 10]],
+  xParallax_0: [0.1, [0, 1]],
+  xParallax_1: [0.01, [0, 1]],
+  yParallax_0: [0.1, [0, 1]],
+  yParallax_1: [0.01, [0, 1]]
+};
+
+/**
  * Generate RGB colour strings from HCL (hue/chroma/lightness)
  */
 const hcl = (h, c, l) => d3.hcl(h, c, l).toString();
@@ -211,6 +242,9 @@ class Area {
   }
 }
 
+/**
+ * Execute a new animation frame and call the next one
+ */
 const run = timestamp => {
   clearCanvas();
   const timeSinceLastRun = updateClock(timestamp);
@@ -218,6 +252,9 @@ const run = timestamp => {
   req = requestAnimationFrame(run);
 };
 
+/**
+ * Create instances of the Area class
+ */
 const makeAreas = () => {
   const c = configValues;
   const areaData = Array.from(Array(c.areaCount).keys()).reverse();
@@ -250,92 +287,44 @@ const makeAreas = () => {
   });
 };
 
-const config = {
-  areaCount: [6, [1, 50]],
-  maxY_0: [0.4, [0, 1]],
-  maxY_1: [0.9, [0, 1]],
-  minY_0: [0.15, [0, 1]],
-  minY_1: [0.8, [0, 1]],
-  walkDistance_0: [0.03, [0, 1]],
-  walkDistance_1: [0.01, [0, 1]],
-  updateFrequency_0: [350, [1, 2000]],
-  updateFrequency_1: [600, [1, 2000]],
-  tickFrequency_0: [0.0625, [0, 1]],
-  tickFrequency_1: [0.125, [0, 1]],
-  hue_0: [2, [0, 360]],
-  hue_1: [12, [0, 360]],
-  hue_change_rate_0: [0.3, [0, 5]],
-  hue_change_rate_1: [0.3, [0, 5]],
-  chroma_0: [45, [0, 100]],
-  chroma_1: [20, [0, 100]],
-  lightness_0: [30, [0, 100]],
-  lightness_1: [80, [0, 100]],
-  blur_0: [0.6, [0, 10]],
-  blur_1: [1.1, [0, 10]],
-  xParallax_0: [0.1, [0, 1]],
-  xParallax_1: [0.01, [0, 1]],
-  yParallax_0: [0.1, [0, 1]],
-  yParallax_1: [0.01, [0, 1]]
+/**
+ * Add event listeners
+ */
+const handleEvents = () => {
+  // Update/redraw on window resize
+  window.addEventListener('resize', () => {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    areas.forEach(a => a.onResize());
+  });
+
+  // Handle parallax effect on mousemove
+  document.addEventListener('mousemove', e => {
+    position.y = e.clientY / height;
+    position.x = e.clientX / width;
+    areas.forEach(a => a.onMousemove());
+  });
+
+  // Toggle (play/pause) animation on spacebar
+  document.addEventListener('keydown', e => {
+    if (e.keyCode !== 32) {
+      return;
+    }
+    if (req) {
+      cancelAnimationFrame(req);
+      req = false;
+    } else {
+      req = requestAnimationFrame(run);
+    }
+  });
 };
 
-const configValues = Object.keys(config).reduce((obj, key) => {
-  obj[key] = config[key][0];
-  return obj;
-}, {});
-
-let areas,
-  width = window.innerWidth,
-  height = window.innerHeight,
-  startTime = 0,
-  previousTime = 0;
-
-const position = {
-  x: 0.5,
-  y: 0.5
-};
-
-const canvas = document.createElement('canvas');
-const context = canvas.getContext('2d');
-
-canvas.width = width;
-canvas.height = height;
-
-makeAreas();
-
-// Update/redraw on window resize
-window.addEventListener('resize', () => {
-  width = window.innerWidth;
-  height = window.innerHeight;
-  canvas.width = width;
-  canvas.height = height;
-  areas.forEach(a => a.onResize());
-});
-
-document.addEventListener('mousemove', e => {
-  position.y = e.clientY / height;
-  position.x = e.clientX / width;
-  areas.forEach(a => a.onMousemove());
-});
-
-document.body.appendChild(canvas);
-
-// Start animation playback
-let req = requestAnimationFrame(run);
-
-// Toggle play/pause animation on spacebar
-document.addEventListener('keydown', e => {
-  if (e.keyCode !== 32) {
-    return;
-  }
-  if (req) {
-    cancelAnimationFrame(req);
-    req = false;
-  } else {
-    req = requestAnimationFrame(run);
-  }
-});
-
-window.onload = function() {
+/**
+ * Start up dat.gui to provide a means to control values
+ */
+const initDatGui = () => {
   const gui = new dat.GUI();
   for (let key in config) {
     const action = gui
@@ -346,3 +335,41 @@ window.onload = function() {
     }
   }
 };
+
+/**
+ * Start animation
+ */
+const initialise = () => {
+  makeAreas();
+  document.body.appendChild(canvas);
+  req = requestAnimationFrame(run);
+  handleEvents();
+  initDatGui();
+};
+
+// Establish some global mutable values
+let areas,
+  req,
+  width = window.innerWidth,
+  height = window.innerHeight,
+  startTime = 0,
+  previousTime = 0,
+  position = {
+    x: 0.5,
+    y: 0.5
+  };
+
+const canvas = document.createElement('canvas');
+const context = canvas.getContext('2d');
+
+canvas.width = width;
+canvas.height = height;
+
+// Reformat the data to just key:value pairs for use with dat.gui
+const configValues = Object.keys(config).reduce((obj, key) => {
+  obj[key] = config[key][0];
+  return obj;
+}, {});
+
+// Initialise
+window.onload = initialise;
