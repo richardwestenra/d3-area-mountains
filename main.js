@@ -15,8 +15,8 @@ const config = {
   tickFrequency_1: [0.125, [0, 1]],
   hue_0: [2, [0, 360]],
   hue_1: [12, [0, 360]],
-  hue_change_rate_0: [0.3, [0, 5]],
-  hue_change_rate_1: [0.3, [0, 5]],
+  hue_change_rate_0: [4, [0, 100]],
+  hue_change_rate_1: [4, [0, 100]],
   chroma_0: [45, [0, 100]],
   chroma_1: [20, [0, 100]],
   lightness_0: [30, [0, 100]],
@@ -101,6 +101,7 @@ class Area {
 
     // Establish mutable values
     this.hue = 0 + this.HUE;
+    this.timeSinceLastRun = 0;
     this.timeSinceLastNewDatum = 0;
 
     // Calculate values and perform initial setup
@@ -195,8 +196,8 @@ class Area {
     }
   }
 
-  updateData(timeSinceLastRun) {
-    this.timeSinceLastNewDatum += timeSinceLastRun;
+  updateData() {
+    this.timeSinceLastNewDatum += this.timeSinceLastRun;
 
     while (this.timeSinceLastNewDatum > this.UPDATE_FREQUENCY) {
       this.timeSinceLastNewDatum -= this.UPDATE_FREQUENCY;
@@ -225,7 +226,8 @@ class Area {
   }
 
   fillStyle() {
-    const hue = (this.hue += this.HUE_CHANGE_RATE);
+    const hueChange = (this.HUE_CHANGE_RATE * this.timeSinceLastRun) / 100;
+    const hue = (this.hue += hueChange);
     if (this.HAS_GRADIENT) {
       const gradient = this.context.createLinearGradient(0, 0, 0, height);
       [0, 1].forEach(stop => {
@@ -262,7 +264,8 @@ class Area {
   }
 
   update(timeSinceLastRun) {
-    this.updateData(timeSinceLastRun);
+    this.timeSinceLastRun = timeSinceLastRun;
+    this.updateData();
     this.updateXOffset();
     this.draw();
   }
