@@ -218,7 +218,8 @@ const run = timestamp => {
   req = requestAnimationFrame(run);
 };
 
-const makeAreas = c => {
+const makeAreas = () => {
+  const c = config;
   const areaData = Array.from(Array(config.areaCount).keys()).reverse();
 
   const areaScaleLinear = d => range =>
@@ -227,7 +228,7 @@ const makeAreas = c => {
       .domain(d3.extent(areaData))
       .range(range)(d);
 
-  return areaData.map(d => {
+  areas = areaData.map(d => {
     const a = areaScaleLinear(d);
     return new Area({
       id: d,
@@ -274,7 +275,8 @@ const config = {
   yParallax_1: 0.01
 };
 
-let width = window.innerWidth,
+let areas,
+  width = window.innerWidth,
   height = window.innerHeight,
   startTime = 0,
   previousTime = 0;
@@ -290,7 +292,7 @@ const context = canvas.getContext('2d');
 canvas.width = width;
 canvas.height = height;
 
-let areas = makeAreas(config);
+makeAreas();
 
 // Update/redraw on window resize
 window.addEventListener('resize', () => {
@@ -327,9 +329,37 @@ document.addEventListener('keydown', e => {
 
 window.onload = function() {
   const gui = new dat.GUI();
-  for (let key in config) {
-    gui.add(config, key).onChange(() => {
-      areas = makeAreas(config);
-    });
+  const configExtents = {
+    areaCount: [1, 20],
+    maxY_0: [0, 1],
+    maxY_1: [0, 1],
+    minY_0: [0, 1],
+    minY_1: [0, 1],
+    walkDistance_0: [0, 1],
+    walkDistance_1: [0, 1],
+    updateFrequency_0: [1, 2000],
+    updateFrequency_1: [1, 2000],
+    tickFrequency_0: [0, 1],
+    tickFrequency_1: [0, 1],
+    hue_0: [0, 360],
+    hue_1: [0, 360],
+    chroma_0: [0, 100],
+    chroma_1: [0, 100],
+    lightness_0: [0, 100],
+    lightness_1: [0, 100],
+    blur_0: [0, 10],
+    blur_1: [0, 10],
+    xParallax_0: [0, 1],
+    xParallax_1: [0, 1],
+    yParallax_0: [0, 1],
+    yParallax_1: [0, 1]
+  };
+  for (let key in configExtents) {
+    const action = gui
+      .add(config, key, ...configExtents[key])
+      .onChange(makeAreas);
+    if (key === 'areaCount') {
+      action.step(1);
+    }
   }
 };
