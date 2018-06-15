@@ -84,6 +84,7 @@ class Area {
     this.HUE_CHANGE_RATE = 0.3;
     this.CHROMA = 50;
     this.LIGHTNESS = 60;
+    this.GRADIENT = 10;
     this.BLUR = 1;
     this.PARALLAX = { x: 0.1, y: 0.1 };
 
@@ -214,8 +215,11 @@ class Area {
   fill() {
     const hue = (this.hue += this.HUE_CHANGE_RATE);
     const gradient = context.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, hcl(hue, this.CHROMA, this.LIGHTNESS - 10));
-    gradient.addColorStop(1, hcl(hue, this.CHROMA, this.LIGHTNESS + 10));
+    [0, 1].forEach(stop => {
+      const mod = stop ? 1 : -1;
+      const lightness = this.LIGHTNESS + this.GRADIENT * mod;
+      gradient.addColorStop(stop, hcl(hue, this.CHROMA, lightness));
+    });
     context.fillStyle = gradient;
     context.filter = `blur(${this.BLUR}px)`;
     context.fill();
