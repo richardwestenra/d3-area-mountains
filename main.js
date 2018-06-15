@@ -21,8 +21,10 @@ const config = {
   chroma_1: [20, [0, 100]],
   lightness_0: [30, [0, 100]],
   lightness_1: [80, [0, 100]],
+  hasGradient: [true],
   blur_0: [0.6, [0, 10]],
   blur_1: [1.1, [0, 10]],
+  hasBlur: [true],
   xParallax_0: [0.1, [0, 1]],
   xParallax_1: [0.01, [0, 1]],
   yParallax_0: [0.1, [0, 1]],
@@ -59,11 +61,15 @@ const updateClock = timestamp => {
 const clearCanvas = context => {
   const hue = areas[0].hue;
   const chroma = 18;
-  const lightness = [83, 100];
-  const gradient = context.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, hcl(hue, chroma, lightness[0]));
-  gradient.addColorStop(0.5, hcl(hue, chroma, lightness[1]));
-  context.fillStyle = gradient;
+  if (configValues.hasGradient) {
+    const lightness = [83, 100];
+    const gradient = context.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, hcl(hue, chroma, lightness[0]));
+    gradient.addColorStop(0.5, hcl(hue, chroma, lightness[1]));
+    context.fillStyle = gradient;
+  } else {
+    context.fillStyle = hcl(hue, chroma, 90);
+  }
   context.rect(0, 0, width, height);
   context.fill();
 };
@@ -213,16 +219,32 @@ class Area {
   }
 
   fill() {
-    const hue = (this.hue += this.HUE_CHANGE_RATE);
-    const gradient = this.context.createLinearGradient(0, 0, 0, height);
-    [0, 1].forEach(stop => {
-      const mod = stop ? 1 : -1;
-      const lightness = this.LIGHTNESS + this.GRADIENT * mod;
-      gradient.addColorStop(stop, hcl(hue, this.CHROMA, lightness));
-    });
-    this.context.fillStyle = gradient;
-    this.context.filter = `blur(${this.BLUR}px)`;
+    this.fillStyle();
+    this.filter();
     this.context.fill();
+  }
+
+  fillStyle() {
+    const hue = (this.hue += this.HUE_CHANGE_RATE);
+    if (this.HAS_GRADIENT) {
+      const gradient = this.context.createLinearGradient(0, 0, 0, height);
+      [0, 1].forEach(stop => {
+        const mod = stop ? 1 : -1;
+        const lightness = this.LIGHTNESS + this.GRADIENT * mod;
+        gradient.addColorStop(stop, hcl(hue, this.CHROMA, lightness));
+      });
+      this.context.fillStyle = gradient;
+    } else {
+      this.context.fillStyle = hcl(hue, this.CHROMA, this.LIGHTNESS);
+    }
+  }
+
+  filter() {
+    if (this.HAS_BLUR) {
+      this.context.filter = `blur(${this.BLUR}px)`;
+    } else {
+      this.context.filter = 'none';
+    }
   }
 
   onResize() {
@@ -284,7 +306,9 @@ const makeAreas = () => {
       HUE_CHANGE_RATE: a([c.hue_change_rate_0, c.hue_change_rate_1]),
       CHROMA: a([c.chroma_0, c.chroma_1]),
       LIGHTNESS: a([c.lightness_0, c.lightness_1]),
+      HAS_GRADIENT: c.hasGradient,
       BLUR: a([c.blur_0, c.blur_1]),
+      HAS_BLUR: c.hasBlur,
       PARALLAX: {
         x: a([c.xParallax_0, c.xParallax_1]),
         y: a([c.yParallax_0, c.yParallax_1])
@@ -332,11 +356,16 @@ const handleEvents = () => {
 const initDatGui = () => {
   const gui = new dat.GUI();
   for (let key in config) {
-    const action = gui
-      .add(configValues, key, ...config[key][1])
-      .onChange(makeAreas);
-    if (key === 'areaCount') {
-      action.step(1);
+    const value = configValues[key];
+    if (typeof value === 'boolean') {
+      gui.add(configValues, key).onChange(makeAreas);
+    } else {
+      const action = gui
+        .add(configValues, key, ...config[key][1])
+        .onChange(makeAreas);
+      if (key === 'areaCount') {
+        action.step(1);
+      }
     }
   }
 };
