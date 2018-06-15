@@ -219,8 +219,8 @@ const run = timestamp => {
 };
 
 const makeAreas = () => {
-  const c = config;
-  const areaData = Array.from(Array(config.areaCount).keys()).reverse();
+  const c = configValues;
+  const areaData = Array.from(Array(c.areaCount).keys()).reverse();
 
   const areaScaleLinear = d => range =>
     d3
@@ -251,32 +251,37 @@ const makeAreas = () => {
 };
 
 const config = {
-  areaCount: 6,
-  maxY_0: 0.4,
-  maxY_1: 0.9,
-  minY_0: 0.15,
-  minY_1: 0.8,
-  walkDistance_0: 0.03,
-  walkDistance_1: 0.01,
-  updateFrequency_0: 350,
-  updateFrequency_1: 600,
-  tickFrequency_0: 0.0625,
-  tickFrequency_1: 0.125,
-  hue_0: 2,
-  hue_1: 12,
-  hue_change_rate_0: 0.3,
-  hue_change_rate_1: 0.3,
-  chroma_0: 45,
-  chroma_1: 20,
-  lightness_0: 30,
-  lightness_1: 80,
-  blur_0: 0.6,
-  blur_1: 1.1,
-  xParallax_0: 0.1,
-  xParallax_1: 0.01,
-  yParallax_0: 0.1,
-  yParallax_1: 0.01
+  areaCount: [6, [1, 50]],
+  maxY_0: [0.4, [0, 1]],
+  maxY_1: [0.9, [0, 1]],
+  minY_0: [0.15, [0, 1]],
+  minY_1: [0.8, [0, 1]],
+  walkDistance_0: [0.03, [0, 1]],
+  walkDistance_1: [0.01, [0, 1]],
+  updateFrequency_0: [350, [1, 2000]],
+  updateFrequency_1: [600, [1, 2000]],
+  tickFrequency_0: [0.0625, [0, 1]],
+  tickFrequency_1: [0.125, [0, 1]],
+  hue_0: [2, [0, 360]],
+  hue_1: [12, [0, 360]],
+  hue_change_rate_0: [0.3, [0, 5]],
+  hue_change_rate_1: [0.3, [0, 5]],
+  chroma_0: [45, [0, 100]],
+  chroma_1: [20, [0, 100]],
+  lightness_0: [30, [0, 100]],
+  lightness_1: [80, [0, 100]],
+  blur_0: [0.6, [0, 10]],
+  blur_1: [1.1, [0, 10]],
+  xParallax_0: [0.1, [0, 1]],
+  xParallax_1: [0.01, [0, 1]],
+  yParallax_0: [0.1, [0, 1]],
+  yParallax_1: [0.01, [0, 1]]
 };
+
+const configValues = Object.keys(config).reduce((obj, key) => {
+  obj[key] = config[key][0];
+  return obj;
+}, {});
 
 let areas,
   width = window.innerWidth,
@@ -332,36 +337,9 @@ document.addEventListener('keydown', e => {
 
 window.onload = function() {
   const gui = new dat.GUI();
-  const configExtents = {
-    areaCount: [1, 20],
-    maxY_0: [0, 1],
-    maxY_1: [0, 1],
-    minY_0: [0, 1],
-    minY_1: [0, 1],
-    walkDistance_0: [0, 1],
-    walkDistance_1: [0, 1],
-    updateFrequency_0: [1, 2000],
-    updateFrequency_1: [1, 2000],
-    tickFrequency_0: [0, 1],
-    tickFrequency_1: [0, 1],
-    hue_0: [0, 360],
-    hue_1: [0, 360],
-    hue_change_rate_0: [0, 5],
-    hue_change_rate_1: [0, 5],
-    chroma_0: [0, 100],
-    chroma_1: [0, 100],
-    lightness_0: [0, 100],
-    lightness_1: [0, 100],
-    blur_0: [0, 10],
-    blur_1: [0, 10],
-    xParallax_0: [0, 1],
-    xParallax_1: [0, 1],
-    yParallax_0: [0, 1],
-    yParallax_1: [0, 1]
-  };
-  for (let key in configExtents) {
+  for (let key in config) {
     const action = gui
-      .add(config, key, ...configExtents[key])
+      .add(configValues, key, ...config[key][1])
       .onChange(makeAreas);
     if (key === 'areaCount') {
       action.step(1);
