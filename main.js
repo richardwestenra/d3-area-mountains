@@ -56,7 +56,7 @@ const updateClock = timestamp => {
 /**
  * Reset the canvas area for the next frame
  */
-const clearCanvas = () => {
+const clearCanvas = context => {
   const hue = areas[0].hue;
   const chroma = 18;
   const lightness = [83, 100];
@@ -162,7 +162,7 @@ class Area {
       .x((d, i) => this.x(i))
       .y0(this.y(0))
       .y1((d, i) => this.y(d))
-      .context(context);
+      .context(this.context);
   }
 
   randomNextDatum(previous) {
@@ -207,22 +207,22 @@ class Area {
   }
 
   draw() {
-    context.beginPath();
+    this.context.beginPath();
     this.area(this.data);
     this.fill();
   }
 
   fill() {
     const hue = (this.hue += this.HUE_CHANGE_RATE);
-    const gradient = context.createLinearGradient(0, 0, 0, height);
+    const gradient = this.context.createLinearGradient(0, 0, 0, height);
     [0, 1].forEach(stop => {
       const mod = stop ? 1 : -1;
       const lightness = this.LIGHTNESS + this.GRADIENT * mod;
       gradient.addColorStop(stop, hcl(hue, this.CHROMA, lightness));
     });
-    context.fillStyle = gradient;
-    context.filter = `blur(${this.BLUR}px)`;
-    context.fill();
+    this.context.fillStyle = gradient;
+    this.context.filter = `blur(${this.BLUR}px)`;
+    this.context.fill();
   }
 
   onResize() {
@@ -250,9 +250,10 @@ class Area {
  * Execute a new animation frame and call the next one
  */
 const run = timestamp => {
-  clearCanvas();
+  clearCanvas(m_context);
   const timeSinceLastRun = updateClock(timestamp);
   areas.forEach(a => a.update(timeSinceLastRun));
+  context.drawImage(m_canvas, 0, 0);
   req = requestAnimationFrame(run);
 };
 
@@ -273,6 +274,7 @@ const makeAreas = () => {
     const a = areaScaleLinear(d);
     return new Area({
       id: d,
+      context: m_context,
       MAX_Y: a([c.maxY_0, c.maxY_1]),
       MIN_Y: a([c.minY_0, c.minY_1]),
       WALK_DISTANCE: a([c.walkDistance_0, c.walkDistance_1]),
@@ -299,8 +301,7 @@ const handleEvents = () => {
   window.addEventListener('resize', () => {
     width = window.innerWidth;
     height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
+    [canvas, m_canvas].forEach(updateCanvasSize);
     areas.forEach(a => a.onResize());
   });
 
@@ -340,6 +341,19 @@ const initDatGui = () => {
   }
 };
 
+const createCanvas = () => {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  updateCanvasSize(canvas);
+
+  return [canvas, context];
+};
+
+const updateCanvasSize = canvas => {
+  canvas.width = width;
+  canvas.height = height;
+};
+
 /**
  * Start animation
  */
@@ -363,11 +377,11 @@ let areas,
     y: 0.5
   };
 
-const canvas = document.createElement('canvas');
-const context = canvas.getContext('2d');
-
-canvas.width = width;
-canvas.height = height;
+// The canvas rendered to the page:
+const [canvas, context] = createCanvas();
+// A virtual canvas for pre-rendering, to improve perf
+// (See https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-pre-render)
+const [m_canvas, m_context] = createCanvas();
 
 // Reformat the data to just key:value pairs for use with dat.gui
 const configValues = Object.keys(config).reduce((obj, key) => {
