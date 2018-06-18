@@ -2,7 +2,7 @@
  * Constants [current-value, [min, max]]
  */
 const config = {
-  areaCount: [6, [1, 50]],
+  areaCount: [6, [1, 200]],
   maxY_0: [0.4, [0, 1]],
   maxY_1: [0.9, [0, 1]],
   minY_0: [0.15, [0, 1]],
@@ -371,6 +371,7 @@ const initDatGui = () => {
       }
     }
   }
+  gui.close();
 };
 
 const createCanvas = () => {
