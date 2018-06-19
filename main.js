@@ -374,9 +374,22 @@ const initDatGui = () => {
   gui.close();
 };
 
+const detectWebGLContext = () => {
+  const cvs = document.createElement("canvas");
+  const gl = cvs.getContext("webgl") || cvs.getContext("experimental-webgl");
+  return gl && gl instanceof WebGLRenderingContext;
+};
+
 const createCanvas = () => {
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
+  let ctx;
+  if (WebGL2D && detectWebGLContext()) {
+    WebGL2D.enable(canvas);
+    ctx = 'webgl-2d';
+  } else { 
+    ctx = '2d';
+  }
+  const context = canvas.getContext(ctx);
   updateCanvasSize(canvas);
 
   return [canvas, context];
