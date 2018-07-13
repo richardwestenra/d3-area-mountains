@@ -164,12 +164,23 @@ class Area {
   }
 
   areaScale() {
-    return d3
-      .area()
-      .x((d, i) => this.x(i))
-      .y0(this.y(0))
-      .y1((d, i) => this.y(d))
-      .context(this.context);
+    return () => {
+      const { sibling } = this;
+      const siblingData = sibling ? sibling.data : [];
+      const data = this.data
+        .map((y1, x1) => ({ y1, x1 }))
+        .concat(siblingData.map((y0, x0) => ({ y0, x0 })));
+      return d3.area()
+        .x(d => sibling && d.x0 ? sibling.x(d.x0) : this.x(d.x1))
+        .y0(d => {
+          if (!sibling) {
+            return this.y(0);
+          }
+          return d.y0 && sibling.y(d.y0);
+        })
+        .y1(d => d.y1 && this.y(d.y1))
+        .context(this.context)(data);
+    };
   }
 
   randomNextDatum(previous) {
@@ -287,7 +298,7 @@ const run = timestamp => {
  */
 const makeAreas = () => {
   const c = configValues;
-  const areaData = Array.from(Array(c.areaCount).keys()).reverse();
+  const areaData = Array.from(Array(c.areaCount).keys());
 
   const areaScaleLinear = d => range =>
     d3
@@ -295,10 +306,11 @@ const makeAreas = () => {
       .domain(d3.extent(areaData))
       .range(range)(d);
 
-  areas = areaData.map(d => {
+  areas = areaData.reduce((areas, d) => {
     const a = areaScaleLinear(d);
-    return new Area({
+    const area = new Area({
       id: d,
+      sibling: last(areas),
       context: m_context,
       MAX_Y: a([c.maxY_0, c.maxY_1]),
       MIN_Y: a([c.minY_0, c.minY_1]),
@@ -317,7 +329,10 @@ const makeAreas = () => {
         y: a([c.yParallax_0, c.yParallax_1])
       }
     });
-  });
+    areas.push(area);
+    return areas;
+  }, [])
+  .reverse();
 };
 
 /**
