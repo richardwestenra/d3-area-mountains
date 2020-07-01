@@ -167,8 +167,8 @@ class Area {
     return d3
       .area()
       .x((d, i) => this.x(i))
-      .y0(this.y(0))
-      .y1((d, i) => this.y(d))
+      .y0(d => d.y0)
+      .y1(d => d.y1)
       .context(this.context);
   }
 
@@ -204,6 +204,14 @@ class Area {
       this.addNewDatum();
       this.data.shift();
     }
+    this.areaData = this.mergeData();
+  }
+
+  mergeData() {
+    return this.data.map((d, i) => ({
+      y0: this.prev ? this.prev.y(this.prev.MIN_Y) : this.y(0),
+      y1: this.y(d)
+    }));
   }
 
   updateXOffset() {
@@ -263,11 +271,11 @@ class Area {
     this.y.range(this.yRange);
   }
 
-  update(timeSinceLastRun) {
+  update(timeSinceLastRun, prev) {
     this.timeSinceLastRun = timeSinceLastRun;
+    this.prev = prev;
     this.updateData();
     this.updateXOffset();
-    this.draw();
   }
 }
 
@@ -277,7 +285,12 @@ class Area {
 const run = timestamp => {
   clearCanvas(m_context);
   const timeSinceLastRun = updateClock(timestamp);
-  areas.forEach(a => a.update(timeSinceLastRun));
+  for (let i = areas.length - 1; i >= 0; i--) {
+    areas[i].update(timeSinceLastRun, areas[i + 1]);
+  }
+  for (let i = 0; i < areas.length; i++) {
+    areas[i].draw();
+  }
   context.drawImage(m_canvas, 0, 0);
   req = requestAnimationFrame(run);
 };
