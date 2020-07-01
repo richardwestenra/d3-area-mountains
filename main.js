@@ -146,7 +146,6 @@ class Area {
   createScales() {
     this.x = this.xScale();
     this.y = this.yScale();
-    this.area = this.areaScale();
   }
 
   xScale() {
@@ -161,15 +160,6 @@ class Area {
       .scaleLinear()
       .domain([0, 1])
       .range(this.yRange);
-  }
-
-  areaScale() {
-    return d3
-      .area()
-      .x((d, i) => this.x(i))
-      .y0(d => d.y0)
-      .y1(d => d.y1)
-      .context(this.context);
   }
 
   randomNextDatum(previous) {
@@ -204,14 +194,6 @@ class Area {
       this.addNewDatum();
       this.data.shift();
     }
-    this.areaData = this.mergeData();
-  }
-
-  mergeData() {
-    return this.data.map((d, i) => ({
-      y0: this.prev ? this.prev.y(this.prev.MIN_Y) : this.y(0),
-      y1: this.y(d)
-    }));
   }
 
   updateXOffset() {
@@ -223,8 +205,19 @@ class Area {
 
   draw() {
     this.context.beginPath();
-    this.area(this.data);
+    this.drawArea();
     this.fill();
+  }
+
+  drawArea() {
+    this.context.beginPath();
+    this.context.moveTo(this.x(0), this.y(this.data[0]));
+    this.data.forEach((d, i) => {
+      this.context.lineTo(this.x(i), this.y(d));
+    })
+    const y0 = this.prev ? this.prev.y(this.prev.MIN_Y) : this.y(0);
+    this.context.lineTo(this.x(this.data.length), y0);
+    this.context.lineTo(this.x(0), y0);
   }
 
   fill() {
