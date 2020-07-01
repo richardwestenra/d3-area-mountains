@@ -211,13 +211,26 @@ class Area {
 
   drawArea() {
     this.context.beginPath();
+    // Draw top line from left to right
     this.context.moveTo(this.x(0), this.y(this.data[0]));
-    this.data.forEach((d, i) => {
-      this.context.lineTo(this.x(i), this.y(d));
-    })
-    const y0 = this.prev ? this.prev.y(this.prev.MIN_Y) : this.y(0);
-    this.context.lineTo(this.x(this.data.length), y0);
-    this.context.lineTo(this.x(0), y0);
+    for (let i = 1; i < this.data.length; i++) {
+      const x = this.x(i);
+      const y = this.y(this.data[i]);
+      this.context.lineTo(x, y);
+    }
+    // Draw bottom line from right to left
+    if (this.prev) {
+      // Use top line of previous area for the bottom line of this one
+      for (let i = this.prev.data.length - 1; i >= 0; i--) {
+        const x = this.prev.x(i);
+        const y = this.prev.y(this.prev.data[i]) + this.BLUR + 2;
+        this.context.lineTo(x, y);
+      }
+    } else {
+      // Run a straight line along the bottom
+      this.context.lineTo(width, height);
+      this.context.lineTo(0, height);
+    }
   }
 
   fill() {
