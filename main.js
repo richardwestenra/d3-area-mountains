@@ -9,8 +9,8 @@ const config = {
   minY_1: [0.8, [0, 1]],
   walkDistance_0: [0.03, [0, 1]],
   walkDistance_1: [0.01, [0, 1]],
-  updateFrequency_0: [350, [1, 2000]],
-  updateFrequency_1: [600, [1, 2000]],
+  updateFrequency_0: [20, [1, 100]],
+  updateFrequency_1: [40, [1, 100]],
   tickFrequency_0: [0.0625, [0, 1]],
   tickFrequency_1: [0.125, [0, 1]],
   hue_0: [2, [0, 360]],
@@ -37,41 +37,23 @@ const config = {
 const hcl = (h, c, l) => d3.hcl(h, c, l).toString();
 
 /**
+ * Generate Hexadecimal colours from HCL (hue/chroma/lightness)
+ */
+const hex = (h, c, l) =>
+  Number('0x' + d3.hcl(h, c, l).formatHex().substr(1));
+
+/**
  * Get the last datum from an array
  */
 const last = data => data[data.length - 1];
 
 /**
- * Calculate the total elapsed time since the start of the animation
- */
-const updateClock = timestamp => {
-  if (!startTime) {
-    startTime = timestamp;
-  }
-  const totalElapsedTime = timestamp - startTime;
-  const timeSinceLastRun = totalElapsedTime - previousTime;
-  previousTime = totalElapsedTime;
-
-  return timeSinceLastRun;
-};
-
-/**
  * Reset the canvas area for the next frame
  */
-const clearCanvas = context => {
+const updateBackground = () => {
   const hue = areas[0].hue;
   const chroma = 18;
-  if (configValues.hasGradient) {
-    const lightness = [83, 100];
-    const gradient = context.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, hcl(hue, chroma, lightness[0]));
-    gradient.addColorStop(0.5, hcl(hue, chroma, lightness[1]));
-    context.fillStyle = gradient;
-  } else {
-    context.fillStyle = hcl(hue, chroma, 90);
-  }
-  context.rect(0, 0, width, height);
-  context.fill();
+  app.renderer.backgroundColor = hex(hue, chroma, 90);
 };
 
 /**
@@ -105,6 +87,10 @@ class Area {
     this.timeSinceLastNewDatum = 0;
 
     // Calculate values and perform initial setup
+    this.graphics = new PIXI.Graphics();
+    // this.blurFilter = new PIXI.filters.BlurFilter();
+    // this.graphics.filters = [this.blurFilter];
+    app.stage.addChild(this.graphics);
     this.calculateDimensions();
     this.setupData();
     this.calculateRanges();
@@ -146,7 +132,6 @@ class Area {
   createScales() {
     this.x = this.xScale();
     this.y = this.yScale();
-    this.area = this.areaScale();
   }
 
   xScale() {
@@ -161,15 +146,6 @@ class Area {
       .scaleLinear()
       .domain([0, 1])
       .range(this.yRange);
-  }
-
-  areaScale() {
-    return d3
-      .area()
-      .x((d, i) => this.x(i))
-      .y0(this.y(0))
-      .y1((d, i) => this.y(d))
-      .context(this.context);
   }
 
   randomNextDatum(previous) {
@@ -214,40 +190,38 @@ class Area {
   }
 
   draw() {
-    this.context.beginPath();
-    this.area(this.data);
-    this.fill();
+    // this.blur();
+    this.graphics.clear();
+    this.drawArea();
   }
 
-  fill() {
-    this.fillStyle();
-    this.filter();
-    this.context.fill();
+  drawArea() {
+    const fill = this.fillStyle();
+    const { data, x, y } = this;
+    this.graphics.beginFill(fill);
+    this.graphics.moveTo(x(0), y(data[0]));
+    for (let i = 1; i < data.length; i++) {
+      this.graphics.lineTo(x(i), y(data[i]));
+    }
+    this.graphics.lineTo(x(data.length - 1), y(0));
+    this.graphics.lineTo(x(0), y(0));
+    this.graphics.closePath();
+    this.graphics.endFill();
   }
 
   fillStyle() {
     const hueChange = (this.HUE_CHANGE_RATE * this.timeSinceLastRun) / 100;
     const hue = (this.hue += hueChange);
-    if (this.HAS_GRADIENT) {
-      const gradient = this.context.createLinearGradient(0, 0, 0, height);
-      [0, 1].forEach(stop => {
-        const mod = stop ? 1 : -1;
-        const lightness = this.LIGHTNESS + this.GRADIENT * mod;
-        gradient.addColorStop(stop, hcl(hue, this.CHROMA, lightness));
-      });
-      this.context.fillStyle = gradient;
-    } else {
-      this.context.fillStyle = hcl(hue, this.CHROMA, this.LIGHTNESS);
-    }
+    return hex(hue, this.CHROMA, this.LIGHTNESS);
   }
 
-  filter() {
-    if (this.HAS_BLUR) {
-      this.context.filter = `blur(${this.BLUR}px)`;
-    } else {
-      this.context.filter = 'none';
-    }
-  }
+  // blur() {
+  //   if (this.HAS_BLUR) {
+  //     this.blurFilter.blur = this.BLUR;
+  //   } else {
+  //     this.graphics.filters = [];
+  //   }
+  // }
 
   onResize() {
     this.calculateDimensions();
@@ -274,12 +248,9 @@ class Area {
 /**
  * Execute a new animation frame and call the next one
  */
-const run = timestamp => {
-  clearCanvas(m_context);
-  const timeSinceLastRun = updateClock(timestamp);
+const run = timeSinceLastRun => {
+  updateBackground();
   areas.forEach(a => a.update(timeSinceLastRun));
-  context.drawImage(m_canvas, 0, 0);
-  req = requestAnimationFrame(run);
 };
 
 /**
@@ -299,7 +270,6 @@ const makeAreas = () => {
     const a = areaScaleLinear(d);
     return new Area({
       id: d,
-      context: m_context,
       MAX_Y: a([c.maxY_0, c.maxY_1]),
       MIN_Y: a([c.minY_0, c.minY_1]),
       WALK_DISTANCE: a([c.walkDistance_0, c.walkDistance_1]),
@@ -328,7 +298,6 @@ const handleEvents = () => {
   window.addEventListener('resize', () => {
     width = window.innerWidth;
     height = window.innerHeight;
-    [canvas, m_canvas].forEach(updateCanvasSize);
     areas.forEach(a => a.onResize());
   });
 
@@ -337,19 +306,6 @@ const handleEvents = () => {
     position.y = e.clientY / height;
     position.x = e.clientX / width;
     areas.forEach(a => a.onMousemove());
-  });
-
-  // Toggle (play/pause) animation on spacebar
-  document.addEventListener('keydown', e => {
-    if (e.keyCode !== 32) {
-      return;
-    }
-    if (req) {
-      cancelAnimationFrame(req);
-      req = false;
-    } else {
-      req = requestAnimationFrame(run);
-    }
   });
 };
 
@@ -374,47 +330,32 @@ const initDatGui = () => {
   gui.close();
 };
 
-const createCanvas = () => {
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  updateCanvasSize(canvas);
-
-  return [canvas, context];
-};
-
-const updateCanvasSize = canvas => {
-  canvas.width = width;
-  canvas.height = height;
-};
-
 /**
  * Start animation
  */
 const initialise = () => {
+  app = new PIXI.Application({
+    width,
+    height,
+    resizeTo: window,
+    antialias: true
+  });
+  document.body.appendChild(app.view);
   makeAreas();
-  document.body.appendChild(canvas);
-  req = requestAnimationFrame(run);
   handleEvents();
   initDatGui();
+  app.ticker.add(run);
 };
 
 // Establish some global mutable values
-let areas,
-  req,
+let app,
+  areas,
   width = window.innerWidth,
   height = window.innerHeight,
-  startTime = 0,
-  previousTime = 0,
   position = {
     x: 0.5,
     y: 0.5
   };
-
-// The canvas rendered to the page:
-const [canvas, context] = createCanvas();
-// A virtual canvas for pre-rendering, to improve perf
-// (See https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-pre-render)
-const [m_canvas, m_context] = createCanvas();
 
 // Reformat the data to just key:value pairs for use with dat.gui
 const configValues = Object.keys(config).reduce((obj, key) => {
